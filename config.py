@@ -96,3 +96,48 @@ def get_required_env(key: str) -> str:
 def is_render() -> bool:
     """Check if running on Render.com."""
     return os.getenv('RENDER', '').lower() == 'true'
+
+def is_github_actions() -> bool:
+    """Check if running in GitHub Actions."""
+    return os.getenv('GITHUB_ACTIONS', '').lower() == 'true'
+
+class Config:
+    """Configuration class for automation"""
+    
+    def __init__(self):
+        self.openai_api_key = get_env('OPENAI_API_KEY')
+        self.youtube_client_id = get_env('YOUTUBE_CLIENT_ID')
+        self.youtube_client_secret = get_env('YOUTUBE_CLIENT_SECRET')
+        self.leonardo_api_key = get_env('LEONARDO_API_KEY')
+        self.webhook_url = get_env('WEBHOOK_URL')
+        self.email_user = get_env('EMAIL_USER')
+        self.email_password = get_env('EMAIL_PASSWORD')
+        self.email_to = get_env('EMAIL_TO')
+        
+        # Check if running in GitHub Actions
+        self.is_github_actions = is_github_actions()
+        
+        # Paths
+        self.output_dir = Path('output')
+        self.credentials_dir = Path('credentials')
+        self.data_dir = Path('data')
+        self.logs_dir = Path('logs')
+        
+        # Create directories
+        for d in [self.output_dir, self.credentials_dir, self.data_dir, self.logs_dir]:
+            d.mkdir(parents=True, exist_ok=True)
+    
+    def validate(self):
+        """Validate required configuration"""
+        missing = []
+        if not self.openai_api_key:
+            missing.append('OPENAI_API_KEY')
+        if not self.youtube_client_id:
+            missing.append('YOUTUBE_CLIENT_ID')
+        if not self.youtube_client_secret:
+            missing.append('YOUTUBE_CLIENT_SECRET')
+        
+        if missing:
+            raise ValueError(f"Missing required environment variables: {', '.join(missing)}")
+        
+        return True

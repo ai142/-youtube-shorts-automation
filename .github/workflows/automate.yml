@@ -1,0 +1,89 @@
+name: YouTube Shorts Automation
+
+on:
+  schedule:
+    # Run every 6 hours to stay under GitHub's 6-hour limit
+    - cron: '0 */6 * * *'
+  workflow_dispatch:  # Allow manual trigger
+
+jobs:
+  automate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 340  # 5 hours 40 minutes - auto close before GitHub kills it
+    
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+        token: ${{ secrets.GITHUB_TOKEN }}
+    
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.11'
+    
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
+    
+    - name: Install ffmpeg
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y ffmpeg
+    
+    - name: Restore previous state
+      run: |
+        # Pull latest state from repo (in case previous run committed state)
+        git pull origin main || true
+        
+        # Create directories if they don't exist
+        mkdir -p output credentials data logs
+    
+    - name: Run automation
+      env:
+        OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+        YOUTUBE_CLIENT_ID: ${{ secrets.YOUTUBE_CLIENT_ID }}
+        YOUTUBE_CLIENT_SECRET: ${{ secrets.YOUTUBE_CLIENT_SECRET }}
+        LEONARDO_API_KEY: ${{ secrets.LEONARDO_API_KEY }}
+        YOUTUBE_CREDENTIALS: ${{ secrets.YOUTUBE_CREDENTIALS }}
+        GITHUB_ACTIONS: "true"
+      run: |
+        # Restore YouTube credentials from secret
+        if [ ! -z "$YOUTUBE_CREDENTIALS" ]; then
+          echo "$YOUTUBE_CREDENTIALS" > credentials/youtube_credentials.json
+        fi
+        
+        # Run the main automation with state persistence
+        python main.py --resume
+    
+    - name: Save state for next run
+      if: always()
+      run: |
+        # Configure git
+        git config user.email "actions@github.com"
+        git config user.name "GitHub Actions"
+        
+        # Save state file if it exists
+        if [ -f "data/automation_state.json" ]; then
+          git add data/automation_state.json data/youtube_shots.db 2>/dev/null || true
+          git add output/*.mp4 output/*.jpg 2>/dev/null || true
+          git commit -m "chore: save automation state [skip ci]" || true
+          git push origin main || true
+        fi
+        
+        # Save YouTube credentials to secret (base64 encoded)
+        if [ -f "credentials/youtube_credentials.json" ]; then
+          echo "YOUTUBE_CREDENTIALS=$(cat credentials/youtube_credentials.json | base64 -w 0)" >> $GITHUB_ENV
+        fi
+    
+    - name: Upload artifacts (videos/thumbnails)
+      if: always()
+      uses: actions/upload-artifact@v4
+      with:
+        name: outputs-${{ github.run_number }}
+        path: |
+          output/
+          logs/
+        retention-days: 7
