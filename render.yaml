@@ -1,0 +1,65 @@
+services:
+  # YouTube Shorts Automation Web Service
+  - name: youtube-shorts-bot
+    type: web
+    env: python
+    region: oregon
+    buildCommand: pip install -r requirements.txt
+    startCommand: python main.py
+    autoDeploy: true
+    envVars:
+      - key: RENDER
+        value: true
+      - key: OPENAI_API_KEY
+        sync: false
+      - key: YOUTUBE_CLIENT_ID
+        sync: false
+      - key: YOUTUBE_CLIENT_SECRET
+        sync: false
+      - key: LEONARDO_API_KEY
+        sync: false
+        optional: true
+      - key: WEBHOOK_URL
+        sync: false
+        optional: true
+      - key: EMAIL_USER
+        sync: false
+        optional: true
+      - key: EMAIL_PASSWORD
+        sync: false
+        optional: true
+      - key: EMAIL_TO
+        sync: false
+        optional: true
+
+  # Cron Job for Daily Automation
+  - name: youtube-shorts-cron
+    type: cron
+    region: oregon
+    schedule: "0 12 * * *"  # Daily at 12:00 UTC
+    buildCommand: pip install -r requirements.txt
+    startCommand: python main.py
+    envVars:
+      - key: RENDER
+        value: true
+      - key: OPENAI_API_KEY
+        sync: false
+      - key: YOUTUBE_CLIENT_ID
+        sync: false
+      - key: YOUTUBE_CLIENT_SECRET
+        sync: false
+      - key: LEONARDO_API_KEY
+        sync: false
+        optional: true
+      - key: WEBHOOK_URL
+        sync: false
+        optional: true
+      - key: EMAIL_USER
+        sync: false
+        optional: true
+      - key: EMAIL_PASSWORD
+        sync: false
+        optional: true
+      - key: EMAIL_TO
+        sync: false
+        optional: true
